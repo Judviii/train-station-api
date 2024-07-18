@@ -31,6 +31,10 @@ class Route(models.Model):
                 "Source and destination stations cannot be the same"
             )
 
+    @property
+    def complete_path(self):
+        return f"{self.source.name} - {self.destination.name}"
+
     def __str__(self):
         return f"{self.source.name} - {self.destination.name}"
 
@@ -59,6 +63,10 @@ class Train(models.Model):
 class Crew(models.Model):
     first_name = models.CharField(max_length=64)
     last_name = models.CharField(max_length=64)
+
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}"
