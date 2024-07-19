@@ -11,6 +11,10 @@ class Station(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        unique_together = ("name", "latitude", "longitude")
+        ordering = ["name"]
+
 
 class Route(models.Model):
     source = models.ForeignKey(
@@ -59,6 +63,9 @@ class Train(models.Model):
     def __str__(self):
         return self.name
 
+    class Meta:
+        ordering = ["name"]
+
 
 class Crew(models.Model):
     first_name = models.CharField(max_length=64)
@@ -96,6 +103,9 @@ class Journey(models.Model):
     def __str__(self):
         return f"{self.route} {self.train.name}"
 
+    class Meta:
+        ordering = ["-departure_time"]
+
 
 class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
@@ -105,6 +115,9 @@ class Order(models.Model):
 
     def __str__(self):
         return str(self.created_at)
+
+    class Meta:
+        ordering = ["-created_at"]
 
 
 class Ticket(models.Model):
