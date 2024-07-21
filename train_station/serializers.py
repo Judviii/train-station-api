@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from django.db import transaction
+from rest_framework.exceptions import ValidationError
 
 from train_station.models import (
     Station,
@@ -36,29 +38,6 @@ class RouteListSerializer(RouteSerializer):
 class RouteDetailSerializer(RouteSerializer):
     source = StationSerializer(many=False, read_only=True)
     destination = StationSerializer(many=False, read_only=True)
-
-
-class OrderSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Order
-        fields = ("id", "created_at", "user")
-
-
-class TicketSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Ticket
-        fields = ("id", "cargo", "seat", "journey", "order")
-
-
-class TicketListSerializer(TicketSerializer):
-    journey = serializers.CharField(
-        source="journey.route.complete_path", read_only=True
-    )
-    order_created_at = serializers.DateTimeField(source="order.created_at")
-
-    class Meta:
-        model = Ticket
-        fields = ("id", "cargo", "seat", "journey", "order_created_at")
 
 
 class TrainTypeSerializer(serializers.ModelSerializer):
@@ -139,3 +118,41 @@ class JourneyDetailSerializer(JourneySerializer):
         return f"{minutes} minutes"
 
 
+class TicketSerializer(serializers.ModelSerializer):
+    def validate(self, attrs):
+        data = super(TicketSerializer, self).validate(attrs=attrs)
+        Ticket.validate_ticket(
+            attrs["cargo"],
+            attrs["seat"],
+            attrs["journey"].train,
+            ValidationError
+        )
+        return data
+
+    class Meta:
+        model = Ticket
+        fields = ("id", "cargo", "seat", "journey",)
+
+
+class TicketListSerializer(TicketSerializer):
+    journey = JourneyListSerializer(many=False, read_only=True)
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    tickets = TicketSerializer(many=True, read_only=False, allow_empty=False)
+
+    class Meta:
+        model = Order
+        fields = ("id", "created_at", "tickets")
+
+    @transaction.atomic()
+    def create(self, validated_data):
+        tickets_data = validated_data.pop("tickets")
+        order = Order.objects.create(**validated_data)
+        for ticket_data in tickets_data:
+            Ticket.objects.create(order=order, **ticket_data)
+        return order
+
+
+class OrderListSerializer(OrderSerializer):
+    tickets = TicketListSerializer(many=True, read_only=True)

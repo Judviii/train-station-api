@@ -1,11 +1,12 @@
 from rest_framework import mixins
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
+from rest_framework.pagination import PageNumberPagination
 
 from rest_framework.viewsets import ModelViewSet
 from train_station.models import (
     Station,
     Route,
-    Ticket,
     Order,
     TrainType,
     Train,
@@ -19,7 +20,6 @@ from train_station.serializers import (
     TrainSerializer,
     OrderSerializer,
     TrainTypeSerializer,
-    TicketSerializer,
     CrewSerializer,
     JourneySerializer,
     JourneyListSerializer,
@@ -28,7 +28,7 @@ from train_station.serializers import (
     RouteDetailSerializer,
     TrainListSerializer,
     TrainDetailSerializer,
-    TicketListSerializer,
+    OrderListSerializer,
 )
 
 
@@ -55,19 +55,33 @@ class RouteViewSet(
         return RouteSerializer
 
 
-class OrderViewSet(ModelViewSet):
-    queryset = Order.objects.all()
+class OrderPagination(PageNumberPagination):
+    page_size = 10
+    max_page_size = 100
+
+
+class OrderViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    GenericViewSet,
+):
+    queryset = Order.objects.prefetch_related(
+        "tickets__journey__route", "tickets__journey__train"
+    )
     serializer_class = OrderSerializer
+    pagination_class = OrderPagination
+    permission_classes = (IsAuthenticated,)
 
-
-class TicketViewSet(ModelViewSet):
-    queryset = Ticket.objects.all()
-    serializer_class = TicketSerializer
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user)
 
     def get_serializer_class(self):
         if self.action == "list":
-            return TicketListSerializer
-        return TicketSerializer
+            return OrderListSerializer
+        return OrderSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
 
 
 class TrainTypeViewSet(ModelViewSet):
