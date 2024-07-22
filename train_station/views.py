@@ -50,14 +50,33 @@ class RouteViewSet(
     queryset = Route.objects.all()
     serializer_class = RouteSerializer
 
+    @staticmethod
+    def _params_to_ints(qs):
+        """Converts a list of string IDs to a list of integers"""
+        return [int(str_id) for str_id in qs.split(",")]
+
+    def get_queryset(self):
+        source = self.request.query_params.get("source")
+        destination = self.request.query_params.get("destination")
+
+        queryset = self.queryset
+
+        if source:
+            source_ids = self._params_to_ints(source)
+            queryset = queryset.filter(source_id__in=source_ids)
+
+        if destination:
+            destination_ids = self._params_to_ints(destination)
+            queryset = queryset.filter(destination_id__in=destination_ids)
+
+        return queryset.distinct()
+
     def get_serializer_class(self):
         if self.action == "list":
             return RouteListSerializer
         if self.action == "retrieve":
             return RouteDetailSerializer
         return RouteSerializer
-
-    # filtering by Source / destination, distance?
 
 
 class OrderPagination(PageNumberPagination):
@@ -97,6 +116,20 @@ class TrainTypeViewSet(ModelViewSet):
 class TrainViewSet(ModelViewSet):
     queryset = Train.objects.all()
     serializer_class = TrainSerializer
+
+    def get_queryset(self):
+        name = self.request.query_params.get("name")
+        train_type = self.request.query_params.get("train_type")
+
+        queryset = self.queryset
+
+        if name:
+            queryset = queryset.filter(name__icontains=name)
+
+        if train_type:
+            queryset = queryset.filter(train_type_id=int(train_type))
+
+        return queryset.distinct()
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -150,4 +183,3 @@ class JourneyViewSet(ModelViewSet):
             return JourneyDetailSerializer
 
         return JourneySerializer
-# filtering by departure time, route,
