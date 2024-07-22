@@ -3,8 +3,8 @@ from datetime import datetime
 from rest_framework import mixins
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
-from rest_framework.pagination import PageNumberPagination
 from django.db.models import F, Count
+from train_station.pagination import OrderPagination, JourneyPagination
 
 from rest_framework.viewsets import ModelViewSet
 from train_station.models import (
@@ -79,11 +79,6 @@ class RouteViewSet(
         return RouteSerializer
 
 
-class OrderPagination(PageNumberPagination):
-    page_size = 10
-    max_page_size = 100
-
-
 class OrderViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
@@ -97,7 +92,7 @@ class OrderViewSet(
     permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
-        return Order.objects.filter(user=self.request.user)
+        return self.queryset.filter(user=self.request.user)
 
     def get_serializer_class(self):
         if self.action == "list":
@@ -156,6 +151,7 @@ class JourneyViewSet(ModelViewSet):
         )
     )
     serializer_class = JourneySerializer
+    pagination_class = JourneyPagination
 
     def get_queryset(self):
         departure_time = self.request.query_params.get("departure_time")
