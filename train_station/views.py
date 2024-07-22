@@ -2,6 +2,7 @@ from rest_framework import mixins
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.pagination import PageNumberPagination
+from django.db.models import F, Count
 
 from rest_framework.viewsets import ModelViewSet
 from train_station.models import (
@@ -107,7 +108,16 @@ class CrewViewSet(ModelViewSet):
 
 
 class JourneyViewSet(ModelViewSet):
-    queryset = Journey.objects.all()
+    queryset = (
+        Journey.objects.all()
+        .select_related("train", "route")
+        .annotate(
+            tickets_available=(
+                    F("train__cargo_num") * F("train__places_in_cargo")
+                    - Count("tickets")
+            )
+        )
+    )
     serializer_class = JourneySerializer
 
     def get_serializer_class(self):
@@ -118,4 +128,3 @@ class JourneyViewSet(ModelViewSet):
             return JourneyDetailSerializer
 
         return JourneySerializer
-
