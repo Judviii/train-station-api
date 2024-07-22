@@ -1,14 +1,13 @@
 from datetime import datetime
 
+from django.db.models import F, Count
 from rest_framework import mixins, status
 from rest_framework.decorators import action
-from rest_framework.viewsets import GenericViewSet
-from django.db.models import F, Count
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from train_station.pagination import OrderPagination, JourneyPagination
-
+from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
 from rest_framework.viewsets import ModelViewSet
+
 from train_station.models import (
     Station,
     Route,
@@ -18,7 +17,7 @@ from train_station.models import (
     Crew,
     Journey,
 )
-
+from train_station.pagination import OrderPagination, JourneyPagination
 from train_station.serializers import (
     StationSerializer,
     RouteSerializer,
@@ -91,7 +90,7 @@ class RouteViewSet(
         source = self.request.query_params.get("source")
         destination = self.request.query_params.get("destination")
 
-        queryset = self.queryset
+        queryset = self.queryset.prefetch_related("source", "destination")
 
         if source:
             source_ids = self._params_to_ints(source)
@@ -117,7 +116,9 @@ class OrderViewSet(
     GenericViewSet,
 ):
     queryset = Order.objects.prefetch_related(
-        "tickets__journey__route", "tickets__journey__train"
+        "tickets__journey__route",
+        "tickets__journey__train",
+        "tickets__journey__crew",
     )
     serializer_class = OrderSerializer
     pagination_class = OrderPagination
@@ -148,7 +149,7 @@ class TrainViewSet(ModelViewSet):
         name = self.request.query_params.get("name")
         train_type = self.request.query_params.get("train_type")
 
-        queryset = self.queryset
+        queryset = self.queryset.select_related("train_type")
 
         if name:
             queryset = queryset.filter(name__icontains=name)
@@ -175,6 +176,7 @@ class TrainViewSet(ModelViewSet):
         permission_classes=[IsAdminUser],
     )
     def upload_image(self, request, pk=None):
+        """Endpoint for uploading image to specific train"""
         train = self.get_object()
         serializer = self.get_serializer(train, data=request.data)
 
@@ -193,7 +195,6 @@ class CrewViewSet(ModelViewSet):
 class JourneyViewSet(ModelViewSet):
     queryset = (
         Journey.objects.all()
-        .select_related("train", "route")
         .annotate(
             tickets_available=(
                     F("train__cargo_num") * F("train__places_in_cargo")
@@ -219,6 +220,9 @@ class JourneyViewSet(ModelViewSet):
             )
         if route:
             queryset = queryset.filter(route_id=int(route))
+
+        if self.action == "retrieve":
+            return queryset.prefetch_related("crew", "tickets")
 
         return queryset
 
