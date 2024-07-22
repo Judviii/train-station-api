@@ -1,12 +1,17 @@
 from datetime import datetime
 
 from django.db.models import F, Count
-from rest_framework import mixins, status
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import (
+    extend_schema,
+    OpenApiParameter,
+    OpenApiExample
+)
+from rest_framework import viewsets, mixins, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
-from rest_framework.viewsets import ModelViewSet
 
 from train_station.models import (
     Station,
@@ -76,7 +81,10 @@ class StationViewSet(
 
 
 class RouteViewSet(
-    ModelViewSet
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    GenericViewSet,
 ):
     queryset = Route.objects.all()
     serializer_class = RouteSerializer
@@ -109,6 +117,33 @@ class RouteViewSet(
             return RouteDetailSerializer
         return RouteSerializer
 
+    @extend_schema(
+        description="Get list of routes",
+        parameters=[
+            OpenApiParameter(
+                "source",
+                type={"type": "list", "items": {"type": "number"}},
+                description="Filter routes by route source (ex. ?source=1,2,3)",
+                required=False,
+                examples=[
+                    OpenApiExample("Example 1", value="1,2,3")
+                ]
+            ),
+            OpenApiParameter(
+                "destination",
+                type={"type": "list", "items": {"type": "number"}},
+                description="Filter routes by route destination"
+                            "(ex. ?destination=1,2,3)",
+                required=False,
+                examples=[
+                    OpenApiExample("Example 1", value="1,2,3")
+                ]
+            )
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
 
 class OrderViewSet(
     mixins.ListModelMixin,
@@ -136,12 +171,21 @@ class OrderViewSet(
         serializer.save(user=self.request.user)
 
 
-class TrainTypeViewSet(ModelViewSet):
+class TrainTypeViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    GenericViewSet,
+):
     queryset = TrainType.objects.all()
     serializer_class = TrainTypeSerializer
 
 
-class TrainViewSet(ModelViewSet):
+class TrainViewSet(
+    mixins.ListModelMixin,
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    viewsets.GenericViewSet,
+):
     queryset = Train.objects.all()
     serializer_class = TrainSerializer
 
@@ -186,13 +230,45 @@ class TrainViewSet(ModelViewSet):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @extend_schema(
+        "Get list of trains",
+        parameters=[
+            OpenApiParameter(
+                "name",
+                type=str,
+                description="Filter train by name (ex. ?name=Slobozhansina)",
+                required=False,
+                examples=[
+                    OpenApiExample("Example 1", value="Slobozhansina")
+                ]
+            ),
+            OpenApiParameter(
+                "train_type",
+                type=int,
+                description="Filter train by train_type_id"
+                            "(ex. ?train_type=3)",
+                required=False,
+                examples=[
+                    OpenApiExample("Example 1", value="1"),
+                    OpenApiExample("Example 2", value="2"),
+                ]
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
-class CrewViewSet(ModelViewSet):
+
+class CrewViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    GenericViewSet,
+):
     queryset = Crew.objects.all()
     serializer_class = CrewSerializer
 
 
-class JourneyViewSet(ModelViewSet):
+class JourneyViewSet(viewsets.ModelViewSet):
     queryset = (
         Journey.objects.all()
         .annotate(
@@ -234,3 +310,32 @@ class JourneyViewSet(ModelViewSet):
             return JourneyDetailSerializer
 
         return JourneySerializer
+
+    @extend_schema(
+        "Get list of journey",
+        parameters=[
+            OpenApiParameter(
+                "departure_time",
+                type=OpenApiTypes.DATE,
+                description="Filter journeys by departure time "
+                            "(ex. ?departure_time=2024-07-25)",
+                required=False,
+                examples=[
+                    OpenApiExample("Example 1", value="2024-07-25"),
+                    OpenApiExample("Example 2", value="2024-08-30"),
+                ]
+            ),
+            OpenApiParameter(
+              "route",
+              type=int,
+              description="Filter journey by route_id (ex. ?route=3)",
+              required=False,
+              examples=[
+                  OpenApiExample("Example 1", value="1"),
+                  OpenApiExample("Example 2", value="3"),
+              ]
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
