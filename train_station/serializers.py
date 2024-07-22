@@ -83,16 +83,13 @@ class JourneyListSerializer(JourneySerializer):
     train = serializers.SlugRelatedField(
         many=False, read_only=True, slug_field="name"
     )
+    train_capacity = serializers.IntegerField(
+        source="train.capacity", read_only=True
+    )
     crew = serializers.SlugRelatedField(
         many=True, read_only=True, slug_field="full_name"
     )
-
-
-class JourneyDetailSerializer(JourneySerializer):
-    route = RouteListSerializer(many=False, read_only=True)
-    train = TrainSerializer(many=False, read_only=True)
-    crew = CrewSerializer(many=True, read_only=True)
-    travel_time = serializers.SerializerMethodField()
+    tickets_available = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Journey
@@ -102,20 +99,10 @@ class JourneyDetailSerializer(JourneySerializer):
             "train",
             "departure_time",
             "arrival_time",
-            "travel_time",
+            "train_capacity",
+            "tickets_available",
             "crew",
         )
-
-    def get_travel_time(self, obj):
-        duration = obj.arrival_time - obj.departure_time
-        days, seconds = duration.days, duration.seconds
-        hours = seconds // 3600
-        minutes = (seconds % 3600) // 60
-        if days > 1:
-            return f"{days} days, {hours} hours, {minutes} minutes"
-        if hours > 1:
-            return f"{hours} hours, {minutes} minutes"
-        return f"{minutes} minutes"
 
 
 class TicketSerializer(serializers.ModelSerializer):
@@ -136,6 +123,48 @@ class TicketSerializer(serializers.ModelSerializer):
 
 class TicketListSerializer(TicketSerializer):
     journey = JourneyListSerializer(many=False, read_only=True)
+
+
+class TicketSeatSerializer(TicketSerializer):
+    class Meta:
+        model = Ticket
+        fields = ("cargo", "seat")
+
+
+class JourneyDetailSerializer(JourneySerializer):
+    route = RouteListSerializer(many=False, read_only=True)
+    train = TrainSerializer(many=False, read_only=True)
+    crew = CrewSerializer(many=True, read_only=True)
+    taken_places = TicketSeatSerializer(
+        source="tickets",
+        many=True,
+        read_only=True,
+    )
+    travel_time = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Journey
+        fields = (
+            "id",
+            "route",
+            "train",
+            "departure_time",
+            "arrival_time",
+            "travel_time",
+            "taken_places",
+            "crew",
+        )
+
+    def get_travel_time(self, obj):
+        duration = obj.arrival_time - obj.departure_time
+        days, seconds = duration.days, duration.seconds
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+        if days > 1:
+            return f"{days} days, {hours} hours, {minutes} minutes"
+        if hours > 1:
+            return f"{hours} hours, {minutes} minutes"
+        return f"{minutes} minutes"
 
 
 class OrderSerializer(serializers.ModelSerializer):
