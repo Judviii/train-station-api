@@ -1,9 +1,11 @@
 from datetime import datetime
 
-from rest_framework import mixins
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import mixins, status
+from rest_framework.decorators import action
 from rest_framework.viewsets import GenericViewSet
 from django.db.models import F, Count
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from train_station.pagination import OrderPagination, JourneyPagination
 
 from rest_framework.viewsets import ModelViewSet
@@ -32,16 +34,46 @@ from train_station.serializers import (
     TrainListSerializer,
     TrainDetailSerializer,
     OrderListSerializer,
+    TrainImageSerializer,
+    StationDetailSerializer,
+    StationImageSerializer,
 )
 
 
 class StationViewSet(
     mixins.CreateModelMixin,
     mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
     GenericViewSet,
 ):
     queryset = Station.objects.all()
     serializer_class = StationSerializer
+
+    def get_serializer_class(self):
+        if self.action == "retrieve":
+            return StationDetailSerializer
+
+        if self.action == "upload_image":
+            return StationImageSerializer
+
+        return StationSerializer
+
+    @action(
+        methods=["POST"],
+        detail=True,
+        url_path="upload-image",
+        permission_classes=[IsAdminUser],
+    )
+    def upload_image(self, request, pk=None):
+        """Endpoint for uploading image to specific station"""
+        station = self.get_object()
+        serializer = self.get_serializer(station, data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.errors, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class RouteViewSet(
@@ -131,7 +163,26 @@ class TrainViewSet(ModelViewSet):
             return TrainListSerializer
         if self.action == "retrieve":
             return TrainDetailSerializer
+        if self.action == "upload_image":
+            return TrainImageSerializer
+
         return TrainSerializer
+
+    @action(
+        methods=["POST"],
+        detail=True,
+        url_path="upload-image",
+        permission_classes=[IsAdminUser],
+    )
+    def upload_image(self, request, pk=None):
+        train = self.get_object()
+        serializer = self.get_serializer(train, data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.errors, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class CrewViewSet(ModelViewSet):

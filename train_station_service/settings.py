@@ -139,3 +139,5 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 10
 }
 
+MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = "/media/"

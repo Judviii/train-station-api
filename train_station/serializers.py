@@ -20,6 +20,18 @@ class StationSerializer(serializers.ModelSerializer):
         fields = ("id", "name", "latitude", "longitude")
 
 
+class StationDetailSerializer(StationSerializer):
+    class Meta:
+        model = Station
+        fields = ("id", "name", "latitude", "longitude", "image")
+
+
+class StationImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Train
+        fields = ("id", "image")
+
+
 class RouteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Route
@@ -60,6 +72,23 @@ class TrainListSerializer(TrainSerializer):
 
 class TrainDetailSerializer(TrainSerializer):
     train_type = TrainTypeSerializer(many=False, read_only=True)
+
+    class Meta:
+        model = Train
+        fields = (
+            "id",
+            "name",
+            "cargo_num",
+            "places_in_cargo",
+            "train_type",
+            "image",
+        )
+
+
+class TrainImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Train
+        fields = ("id", "image")
 
 
 class CrewSerializer(serializers.ModelSerializer):

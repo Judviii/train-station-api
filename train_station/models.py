@@ -1,12 +1,31 @@
+import os
+import uuid
+
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.conf import settings
+from django.utils.text import slugify
+
+
+def image_file_path(instance, filename, subdirectory):
+    _, extension = os.path.splitext(filename)
+    filename = f"{slugify(instance.name)}-{uuid.uuid4()}{extension}"
+    return os.path.join(f"uploads/{subdirectory}/", filename)
+
+
+def station_image_file_path(instance, filename):
+    return image_file_path(instance, filename, "stations")
+
+
+def train_image_file_path(instance, filename):
+    return image_file_path(instance, filename, "trains")
 
 
 class Station(models.Model):
     name = models.CharField(max_length=255, unique=True)
     latitude = models.FloatField()
     longitude = models.FloatField()
+    image = models.ImageField(null=True, upload_to=station_image_file_path)
 
     def __str__(self):
         return self.name
@@ -59,6 +78,7 @@ class Train(models.Model):
         on_delete=models.CASCADE,
         related_name="trains",
     )
+    image = models.ImageField(null=True, upload_to=train_image_file_path)
 
     @property
     def capacity(self) -> int:
