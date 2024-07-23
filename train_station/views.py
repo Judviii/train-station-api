@@ -113,8 +113,10 @@ class RouteViewSet(
     def get_serializer_class(self):
         if self.action == "list":
             return RouteListSerializer
+
         if self.action == "retrieve":
             return RouteDetailSerializer
+
         return RouteSerializer
 
     @extend_schema(
@@ -165,6 +167,7 @@ class OrderViewSet(
     def get_serializer_class(self):
         if self.action == "list":
             return OrderListSerializer
+
         return OrderSerializer
 
     def perform_create(self, serializer):
@@ -206,8 +209,10 @@ class TrainViewSet(
     def get_serializer_class(self):
         if self.action == "list":
             return TrainListSerializer
+
         if self.action == "retrieve":
             return TrainDetailSerializer
+
         if self.action == "upload_image":
             return TrainImageSerializer
 

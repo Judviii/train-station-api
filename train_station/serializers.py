@@ -101,7 +101,12 @@ class JourneySerializer(serializers.ModelSerializer):
     class Meta:
         model = Journey
         fields = (
-            "id", "route", "train", "departure_time", "arrival_time", "crew"
+            "id",
+            "route",
+            "train",
+            "departure_time",
+            "arrival_time",
+            "crew",
         )
 
 
