@@ -194,9 +194,9 @@ class JourneyDetailSerializer(JourneySerializer):
         days, seconds = duration.days, duration.seconds
         hours = seconds // 3600
         minutes = (seconds % 3600) // 60
-        if days > 1:
+        if days > 0:
             return f"{days} days, {hours} hours, {minutes} minutes"
-        if hours > 1:
+        if hours > 0:
             return f"{hours} hours, {minutes} minutes"
         return f"{minutes} minutes"
 

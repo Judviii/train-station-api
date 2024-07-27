@@ -125,7 +125,8 @@ class RouteViewSet(
             OpenApiParameter(
                 "source",
                 type={"type": "list", "items": {"type": "number"}},
-                description="Filter routes by route source (ex. ?source=1,2,3)",
+                description="Filter routes by route source "
+                            "(ex. ?source=1,2,3)",
                 required=False,
                 examples=[
                     OpenApiExample("Example 1", value="1,2,3")
@@ -278,8 +279,8 @@ class JourneyViewSet(viewsets.ModelViewSet):
         Journey.objects.all()
         .annotate(
             tickets_available=(
-                    F("train__cargo_num") * F("train__places_in_cargo")
-                    - Count("tickets")
+                F("train__cargo_num") * F("train__places_in_cargo")
+                - Count("tickets")
             )
         )
     )
@@ -331,14 +332,14 @@ class JourneyViewSet(viewsets.ModelViewSet):
                 ]
             ),
             OpenApiParameter(
-              "route",
-              type=int,
-              description="Filter journey by route_id (ex. ?route=3)",
-              required=False,
-              examples=[
-                  OpenApiExample("Example 1", value="1"),
-                  OpenApiExample("Example 2", value="3"),
-              ]
+                "route",
+                type=int,
+                description="Filter journey by route_id (ex. ?route=3)",
+                required=False,
+                examples=[
+                    OpenApiExample("Example 1", value="1"),
+                    OpenApiExample("Example 2", value="3"),
+                ]
             ),
         ]
     )
