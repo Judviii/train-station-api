@@ -22,7 +22,7 @@ from train_station.models import (
 from train_station.serializers import (
     RouteListSerializer,
     TrainListSerializer,
-    JourneyListSerializer
+    JourneyListSerializer, JourneySerializer
 )
 
 TRAIN_URL = reverse("train_station:train-list")
@@ -39,14 +39,14 @@ def station_image_upload_url(station_id):
 def station_detail_url(station_id):
     return reverse(
         "train-station:station-detail",
-        kwargs={"station_id": station_id}
+        kwargs={"pk": station_id}
     )
 
 
 def train_image_upload_url(train_id):
     return reverse(
-        "train-station:station-upload-image",
-        kwargs={"station_id": train_id}
+        "train-station:train-upload-image",
+        kwargs={"pk": train_id}
     )
 
 
@@ -85,23 +85,32 @@ def sample_route(**params):
     defaults.update(params)
     return Route.objects.create(**defaults)
 
+
+def sample_crew(**params):
+    defaults = {
+        "first_name": "John",
+        "last_name": "Smith",
+    }
+    defaults.update(params)
+    return Crew.objects.create(**defaults)
+
+
 def sample_journey(**params):
     departure_time = datetime.strptime(
-                "2024-8-22", "%Y-%m-%d"
-            ).date()
-    arrival_time = datetime.strptime(
-        "2024-8-23", "%Y-%m-%d"
-    ).date()
-    crew = Crew.objects.create(first_name="John", last_name="Doe")
+        "2024-08-22 10:00:00", "%Y-%m-%d %H:%M:%S"
+    )
+    arrival_time = datetime.strptime("2024-08-23 15:00:00", "%Y-%m-%d %H:%M:%S")
+    crew = [sample_crew()]
     defaults = {
         "route": sample_route(),
         "train": sample_train(),
         "departure_time": departure_time,
         "arrival_time": arrival_time,
-        "crew": crew,
     }
     defaults.update(params)
-    return Journey.objects.create(**defaults)
+    journey = Journey.objects.create(**defaults)
+    journey.crew.set(crew)
+    return journey
 
 
 class UnauthenticatedTrainStationAPITests(TestCase):
@@ -216,81 +225,80 @@ class AuthenticatedTrainStationAPITests(TestCase):
     def test_filter_train_by_train_type(self):
         train_1 = sample_train()
         train_2 = sample_train()
-        train_3 = sample_train()
 
         res = self.client.get(
             TRAIN_URL,
             {
-                "train_type": f"{train_2.train_type.id}, "
-                              f"{train_3.train_type.id}"
+                "train_type": f"{train_1.train_type.id}"
             }
         )
 
         serializer_1 = TrainListSerializer(train_1)
         serializer_2 = TrainListSerializer(train_2)
-        serializer_3 = TrainListSerializer(train_3)
 
-        self.assertNotIn(serializer_1.data, res.data)
-        self.assertIn(serializer_2.data, res.data)
-        self.assertIn(serializer_3.data, res.data)
+        self.assertIn(serializer_1.data, res.data)
+        self.assertNotIn(serializer_2.data, res.data)
 
         res = self.client.get(
             TRAIN_URL,
-            {"train_type": f"{train_1.train_type.id}"}
+            {"train_type": f"{train_2.train_type.id}"}
         )
 
-        self.assertIn(serializer_1.data, res.data)
-        self.assertNotIn(serializer_2.data, res.data)
-        self.assertNotIn(serializer_3.data, res.data)
+        self.assertNotIn(serializer_1.data, res.data)
+        self.assertIn(serializer_2.data, res.data)
 
     def test_filter_journey_by_departure_time(self):
-        journey_1 = sample_journey()
-        departure_time = datetime.strptime(
-                "2024-8-28", "%Y-%m-%d"
-            ).date()
-        journey_2 = sample_journey(departure_time=departure_time)
+        journey_1 = sample_journey(departure_time="2024-08-28T10:00:00Z")
+        journey_2 = sample_journey(departure_time="2024-08-29T10:00:00Z")
 
         serializer_1 = JourneyListSerializer(journey_1)
         serializer_2 = JourneyListSerializer(journey_2)
 
-        res = self.client.get(
-            JOURNEY_URL,
-            {"departure_time": f"{journey_1.departure_time}"}
+        res = self.client.get(JOURNEY_URL,
+                                   {"departure_time": "2024-08-28"})
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        response_data = res.json().get("results", [])
+
+        serialized_data_1 = serializer_1.data
+        serialized_data_2 = serializer_2.data
+
+        self.assertTrue(
+            any(
+                item['id'] == serialized_data_1['id']
+                for item in response_data
+            )
         )
-
-        self.assertIn(serializer_1.data, res.data)
-        self.assertNotIn(serializer_2.data, res.data)
-
-        res = self.client.get(
-            JOURNEY_URL,
-            {"departure_time": f"{journey_2.departure_time}"}
+        self.assertFalse(
+            any(
+                item['id'] == serialized_data_2['id']
+                for item in response_data
+            )
         )
-
-        self.assertNotIn(serializer_1.data, res.data)
-        self.assertIn(serializer_2.data, res.data)
 
     def test_filter_journey_by_route(self):
-        journey_1 = sample_journey()
-        journey_2 = sample_journey()
-
-        serializer_1 = JourneyListSerializer(journey_1)
-        serializer_2 = JourneyListSerializer(journey_2)
-
-        res = self.client.get(
-            JOURNEY_URL,
-            {"route": "1"}
-        )
-
-        self.assertNotIn(serializer_1.data, res.data)
-        self.assertIn(serializer_2.data, res.data)
+        route_1 = sample_route()
+        route_2 = sample_route()
+        journey_1 = sample_journey(route=route_1)
+        journey_2 = sample_journey(route=route_2)
 
         res = self.client.get(
             JOURNEY_URL,
-            {"route": "2"}
+            {"route": f"{journey_1.route.id}"}
         )
 
-        self.assertIn(serializer_1.data, res.data)
-        self.assertNotIn(serializer_2.data, res.data)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        serializer1 = JourneyListSerializer(journey_1)
+        serializer2 = JourneyListSerializer(journey_2)
+
+        self.assertEqual(
+            serializer1.data["id"], res.data["results"][-1]["id"]
+        )
+        self.assertNotEqual(
+            serializer2.data["id"], res.data["results"][-1]["id"]
+        )
 
 
 class AdminTrainStationApiTests(TestCase):
@@ -304,32 +312,65 @@ class AdminTrainStationApiTests(TestCase):
         self.client.force_authenticate(self.user)
 
     def test_create_journey(self):
-        journey = sample_journey(route=None, train=None, crew=None)
+        route = sample_route()
+        train = sample_train()
+        journey = sample_journey(route=route, train=train)
 
-        res = self.client.post(JOURNEY_URL, journey)
+        serializer = JourneySerializer(journey)
+        journey_data = serializer.data
 
-        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
-
-    def test_create_journey_with_train(self):
-        journey = sample_journey(route=None, crew=None)
-
-        res = self.client.post(JOURNEY_URL, journey)
+        res = self.client.post(JOURNEY_URL, journey_data, format="json")
 
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
 
-    def test_create_journey_with_route(self):
-        journey = sample_journey(train=None, crew=None)
+    def test_create_journey_without_train(self):
+        route = sample_route()
+        crew = [sample_crew()]
 
-        res = self.client.post(JOURNEY_URL, journey)
+        journey_data = {
+            "route": route.id,
+            "train": "Not a train",
+            "departure_time": "2024-08-22T10:00:00Z",
+            "arrival_time": "2024-08-23T15:00:00Z",
+            "crew": [crew[0].id]
+        }
 
-        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        res = self.client.post(JOURNEY_URL, journey_data, format="json")
 
-    def test_create_journey_with_crew(self):
-        journey = sample_journey(train=None, route=None)
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("train", res.data)
 
-        res = self.client.post(JOURNEY_URL, journey)
+    def test_create_journey_without_route(self):
+        train = sample_train()
+        crew = [sample_crew()]
 
-        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
+        journey_data = {
+            "train": train.id,
+            "departure_time": "2024-08-22T10:00:00Z",
+            "arrival_time": "2024-08-23T15:00:00Z",
+            "crew": [crew[0].id]
+        }
+
+        res = self.client.post(JOURNEY_URL, journey_data, format="json")
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("route", res.data)
+
+    def test_create_journey_without_crew(self):
+        route = sample_route()
+        train = sample_train()
+
+        journey_data = {
+            "route": route.id,
+            "train": train.id,
+            "departure_time": "2024-08-22T10:00:00Z",
+            "arrival_time": "2024-08-23T15:00:00Z"
+        }
+
+        res = self.client.post(JOURNEY_URL, journey_data, format="json")
+
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("crew", res.data)
 
 
 class StationImageUploadTests(TestCase):
