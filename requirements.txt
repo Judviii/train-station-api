@@ -11,3 +11,4 @@ pep8-naming==0.13.2
 psycopg==3.2.1
 psycopg2-binary==2.9.9
 setuptools==71.1.0
+python-dotenv==1.0.1

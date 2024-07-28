@@ -13,6 +13,10 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 from datetime import timedelta
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env file
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -98,7 +102,7 @@ WSGI_APPLICATION = "train_station_service.wsgi.application"
 
 # For Docker-based development, use the following Postgres settings.
 # Ensure that the environment variables are correctly set in your .env file.
-
+#
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
