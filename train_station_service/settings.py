@@ -29,6 +29,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Ensure that the environment variables are correctly set in your .env file.
 SECRET_KEY = os.environ["SECRET_KEY"]
 
+# To run it locally for test case, please use this variable:
+# SECRET_KEY = "django-insecure-0(njc*t7hc-ezawxtqanzfkykpo8&s#(@hs316%f8^ny0g3(jh"
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 

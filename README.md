@@ -10,8 +10,8 @@ This project provides a Django-based API for managing train routes, trains, jour
 
 Before you can run this project, make sure you have the following installed:
 
-- Python 3.8 or higher
-- Django 3.2 or higher
+- Python 3.11 or higher
+- Django 4.0.4
 - pip (Python package installer)
 - Docker (if you prefer running the API in a container)
 
@@ -28,12 +28,14 @@ Before you can run this project, make sure you have the following installed:
     venv\Scripts\activate
     
     pip install -r requirements.txt
-    
+    # Change the SECRET_KEY and DATABASES variables in settings.py 
+    # to run it locally.
     python manage.py migrate
     python manage.py createsuperuser
     python manage.py runserver
    
     (API will be available at http://127.0.0.1:8000/api/)
+    (API documentation accessible at /api/doc/swagger/ or /api/doc/redoc/)
     python manage.py test
 ```
 
@@ -47,10 +49,11 @@ cd train_station_api
 docker-compose build
 docker-compose up
 ```
-- Create new admin user. `docker-compose run app sh -c "python manage.py createsuperuser`;
+- Create new admin user. `docker-compose exec app python manage.py createsuperuser`;
 - API will be available at http://127.0.0.1:8001/api/
-- Get JWT token at http://127.0.0.1:8001/api/token/
-- Run tests: `docker-compose run app sh -c "python manage.py test"`;
+- API documentation accessible at http://127.0.0.1:8001/api/doc/swagger/
+- Get JWT token at http://127.0.0.1:8001/api/user/token/
+- Run tests: `docker-compose exec app python manage.py test`;
 
 ### Features
 
